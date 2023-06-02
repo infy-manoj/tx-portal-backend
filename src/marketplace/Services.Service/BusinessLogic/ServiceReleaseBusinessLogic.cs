@@ -64,9 +64,14 @@ public class ServiceReleaseBusinessLogic : IServiceReleaseBusinessLogic
     {
         var result = await _portalRepositories.GetInstance<IOfferRepository>()
             .GetServiceDetailsByIdAsync(serviceId).ConfigureAwait(false);
-        if (result == default)
+        if (result == null)
         {
-            throw new NotFoundException($"serviceId {serviceId} not found or Incorrect Status");
+            throw new NotFoundException($"serviceId {serviceId} does not exist");
+        }
+
+        if (result.OfferStatusId != OfferStatusId.IN_REVIEW)
+        {
+            throw new ConflictException($"serviceId {serviceId} is incorrect status");
         }
 
         return new ServiceData(
@@ -79,9 +84,7 @@ public class ServiceReleaseBusinessLogic : IServiceReleaseBusinessLogic
             result.ProviderUri ?? Constants.ErrorString,
             result.ContactEmail,
             result.ContactNumber,
-            result.LicenseTypeId,
-            result.OfferStatusId,
-            result.TechnicalUserProfile.ToDictionary(g => g.TechnicalUserProfileId, g => g.UserRoles)
+            result.LicenseTypeId
         );
     }
 
@@ -113,8 +116,7 @@ public class ServiceReleaseBusinessLogic : IServiceReleaseBusinessLogic
             result.ContactNumber,
             result.Documents,
             result.SalesManagerId,
-            result.ServiceTypeIds,
-            result.TechnicalUserProfile);
+            result.ServiceTypeIds);
     }
     
     /// <inheritdoc/>
@@ -132,26 +134,10 @@ public class ServiceReleaseBusinessLogic : IServiceReleaseBusinessLogic
         _offerService.CreateOrUpdateProviderOfferAgreementConsent(serviceId, offerAgreementConsents, userId, OfferTypeId.SERVICE);
 
      /// <inheritdoc/>
-    public Task<Pagination.Response<InReviewServiceData>> GetAllInReviewStatusServiceAsync(int page, int size, OfferSorting? sorting, string? serviceName, string? languageShortName, ServiceReleaseStatusIdFilter? statusId) =>
+    public Task<Pagination.Response<InReviewServiceData>> GetAllInReviewStatusServiceAsync(int page, int size, OfferSorting? sorting, string? serviceName, string? languageShortName) =>
         Pagination.CreateResponseAsync(page, size, 15,
             _portalRepositories.GetInstance<IOfferRepository>()
-                .GetAllInReviewStatusServiceAsync(GetOfferStatusIds(statusId), OfferTypeId.SERVICE, sorting ?? OfferSorting.DateDesc,serviceName, languageShortName ?? Constants.DefaultLanguage, Constants.DefaultLanguage));
-    
-    private IEnumerable<OfferStatusId> GetOfferStatusIds(ServiceReleaseStatusIdFilter? serviceStatusIdFilter)
-    {
-        switch(serviceStatusIdFilter)
-        {
-            case ServiceReleaseStatusIdFilter.InReview:
-            {
-                return new []{ OfferStatusId.IN_REVIEW };
-            }
-            
-            default :
-            {
-                return _settings.OfferStatusIds;
-            }
-        }       
-    }
+                .GetAllInReviewStatusServiceAsync(_settings.OfferStatusIds, OfferTypeId.SERVICE, sorting ?? OfferSorting.DateDesc,serviceName, languageShortName));
 
      /// <inheritdoc />
      public Task<Guid> CreateServiceOfferingAsync(ServiceOfferingData data, string iamUserId) =>
@@ -245,12 +231,4 @@ public class ServiceReleaseBusinessLogic : IServiceReleaseBusinessLogic
     /// <inheritdoc/>
     public Task DeleteServiceDocumentsAsync(Guid documentId, string iamUserId) =>
         _offerService.DeleteDocumentsAsync(documentId, iamUserId, _settings.DeleteDocumentTypeIds, OfferTypeId.SERVICE);
-    
-    /// <inheritdoc />
-    public Task<IEnumerable<TechnicalUserProfileInformation>> GetTechnicalUserProfilesForOffer(Guid offerId, string iamUserId) =>
-        _offerService.GetTechnicalUserProfilesForOffer(offerId, iamUserId, OfferTypeId.SERVICE);
-    
-    /// <inheritdoc />
-    public Task UpdateTechnicalUserProfiles(Guid serviceId, IEnumerable<TechnicalUserProfileData> data, string iamUserId) =>
-        _offerService.UpdateTechnicalUserProfiles(serviceId, OfferTypeId.SERVICE, data, iamUserId, _settings.TechnicalUserProfileClient);
 }

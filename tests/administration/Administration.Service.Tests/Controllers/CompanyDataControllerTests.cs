@@ -126,16 +126,15 @@ public class CompanyDataControllerTests
     public async Task GetCompanyRoleAndConsentAgreementDetailsAsync_ReturnsExpectedResult()
     {
         // Arrange
-        var languageShortName = "en";
         var companyRoleConsentDatas = _fixture.CreateMany<CompanyRoleConsentViewData>(2).ToAsyncEnumerable();
-        A.CallTo(() => _logic.GetCompanyRoleAndConsentAgreementDetailsAsync(IamUserId, languageShortName))
+        A.CallTo(() => _logic.GetCompanyRoleAndConsentAgreementDetailsAsync(IamUserId))
             .Returns(companyRoleConsentDatas);
         
         // Act
-        await this._controller.GetCompanyRoleAndConsentAgreementDetailsAsync(languageShortName).ToListAsync().ConfigureAwait(false);
+        await this._controller.GetCompanyRoleAndConsentAgreementDetailsAsync().ToListAsync().ConfigureAwait(false);
 
         // Assert
-        A.CallTo(() => _logic.GetCompanyRoleAndConsentAgreementDetailsAsync(IamUserId, languageShortName)).MustHaveHappenedOnceExactly();
+        A.CallTo(() => _logic.GetCompanyRoleAndConsentAgreementDetailsAsync(IamUserId)).MustHaveHappenedOnceExactly();
     }
 
     [Fact]

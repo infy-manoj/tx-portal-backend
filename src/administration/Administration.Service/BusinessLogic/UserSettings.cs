@@ -42,12 +42,6 @@ public class UserSettings
     /// <value></value>
     [Required]
     public IEnumerable<CompanyUserStatusId> CompanyUserStatusIds { get; set; } = null!;
-
-    /// <summary>
-    /// Company User Status Id
-    /// </summary>
-    [Required]
-    public IDictionary<string,IEnumerable<string>> UserAdminRoles { get; set; } = null!;
 }
 
 public class UserSetting

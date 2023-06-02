@@ -65,8 +65,8 @@ public class CustodianServiceTests
     public async Task CreateWallet_WithValidData_DoesNotThrowException()
     {
         // Arrange
-        const string bpn = "123";
-        const string name = "test";
+        var bpn = "123";
+        var name = "test";
         var httpMessageHandlerMock =
             new HttpMessageHandlerMock(HttpStatusCode.OK);
         var httpClient = new HttpClient(httpMessageHandlerMock)
@@ -84,19 +84,13 @@ public class CustodianServiceTests
         true.Should().BeTrue(); // One Assert is needed - just checking for no exception
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.Conflict, "{ \"message\": \"Wallet with given identifier already exists!\" }", "call to external system custodian-post failed with statuscode 409 - Message: Wallet with given identifier already exists!")]
-    [InlineData(HttpStatusCode.BadRequest, "{ \"test\": \"123\" }", "call to external system custodian-post failed with statuscode 400")]
-    [InlineData(HttpStatusCode.BadRequest, "this is no json", "call to external system custodian-post failed with statuscode 400")]
-    [InlineData(HttpStatusCode.Forbidden, null, "call to external system custodian-post failed with statuscode 403")]
-    public async Task CreateWallet_WithConflict_ThrowsServiceExceptionWithErrorContent(HttpStatusCode statusCode, string content, string message)
+    [Fact]
+    public async Task CreateWallet_WithInvalidData_ThrowsServiceException()
     {
         // Arrange
-        const string bpn = "123";
-        const string name = "test";
-        var httpMessageHandlerMock = content == null
-            ? new HttpMessageHandlerMock(statusCode)
-            : new HttpMessageHandlerMock(statusCode, new StringContent(content));
+        var bpn = "123";
+        var name = "test";
+        var httpMessageHandlerMock = new HttpMessageHandlerMock(HttpStatusCode.BadRequest);
         var httpClient = new HttpClient(httpMessageHandlerMock)
         {
             BaseAddress = new Uri("https://base.address.com")
@@ -109,8 +103,8 @@ public class CustodianServiceTests
 
         // Assert
         var ex = await Assert.ThrowsAsync<ServiceException>(Act);
-        ex.Message.Should().Be(message);
-        ex.StatusCode.Should().Be(statusCode);
+        ex.Message.Should().Contain("call to external system custodian-post failed with statuscode");
+        ex.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion

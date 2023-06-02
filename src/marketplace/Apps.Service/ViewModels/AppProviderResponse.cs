@@ -43,7 +43,6 @@ namespace Org.Eclipse.TractusX.Portal.Backend.Apps.Service.ViewModels;
 /// <param name="Documents">list of linked documents</param>
 /// <param name="SalesManagerId">id of the salesmanager</param>
 /// <param name="PrivacyPolicies">the privacy policies</param>
-/// <param name="TechnicalUserProfile">the technicalUser Profile</param>
 public record AppProviderResponse (
     string? Title, 
     string Provider, 
@@ -60,6 +59,5 @@ public record AppProviderResponse (
     string? ContactNumber, 
     IDictionary<DocumentTypeId, IEnumerable<DocumentData>> Documents,
     Guid? SalesManagerId,
-    IEnumerable<PrivacyPolicyId> PrivacyPolicies,
-    IDictionary<Guid, IEnumerable<string>> TechnicalUserProfile
+    IEnumerable<PrivacyPolicyId> PrivacyPolicies
 );

@@ -388,9 +388,9 @@ public class UserController : ControllerBase
     [HttpGet]
     [Authorize(Roles = "view_own_user_account")]
     [Route("ownUser")]
-    [ProducesResponseType(typeof(CompanyOwnUserDetails), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CompanyUserDetails), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
-    public Task<CompanyOwnUserDetails> GetOwnUserDetails() =>
+    public Task<CompanyUserDetails> GetOwnUserDetails() =>
         this.WithIamUserId(iamUserId => _logic.GetOwnUserDetails(iamUserId));
 
     /// <summary>

@@ -82,7 +82,7 @@ public class ApplicationActivationService : IApplicationActivationService
         {
             throw new ConflictException($"CompanyApplication {context.ApplicationId} is not in status SUBMITTED");
         }
-        var (companyId, companyName, businessPartnerNumber, iamIdpAliasse) = result;
+        var (companyId, businessPartnerNumber, iamIdpAliasse) = result;
 
         if (string.IsNullOrWhiteSpace(businessPartnerNumber))
         {
@@ -108,7 +108,7 @@ public class ApplicationActivationService : IApplicationActivationService
         var notifications = _settings.WelcomeNotificationTypeIds.Select(x => (default(string), x));
         await _notificationService.CreateNotifications(_settings.CompanyAdminRoles, null, notifications, companyId).AwaitAll().ConfigureAwait(false);
 
-        await PostRegistrationWelcomeEmailAsync(applicationRepository, context.ApplicationId, companyName, businessPartnerNumber).ConfigureAwait(false);
+        await PostRegistrationWelcomeEmailAsync(userRolesRepository, applicationRepository, context.ApplicationId).ConfigureAwait(false);
 
         if (assignedRoles != null)
         {
@@ -221,10 +221,11 @@ public class ApplicationActivationService : IApplicationActivationService
         }
     }
 
-    private async Task PostRegistrationWelcomeEmailAsync(IApplicationRepository applicationRepository, Guid applicationId, string companyName, string businessPartnerNumber)
+    private async Task PostRegistrationWelcomeEmailAsync(IUserRolesRepository userRolesRepository, IApplicationRepository applicationRepository, Guid applicationId)
     {
         var failedUserNames = new List<string>();
-        await foreach (var user in applicationRepository.GetEmailDataUntrackedAsync(applicationId).ConfigureAwait(false))
+        var initialRolesData = await GetRoleData(userRolesRepository, _settings.CompanyAdminRoles).ConfigureAwait(false);
+        await foreach (var user in applicationRepository.GetWelcomeEmailDataUntrackedAsync(applicationId, initialRolesData.Select(x => x.UserRoleId)).ConfigureAwait(false))
         {
             var userName = string.Join(" ", new[] { user.FirstName, user.LastName }.Where(item => !string.IsNullOrWhiteSpace(item)));
             if (string.IsNullOrWhiteSpace(user.Email))
@@ -236,16 +237,15 @@ public class ApplicationActivationService : IApplicationActivationService
             var mailParameters = new Dictionary<string, string>
             {
                 { "userName", !string.IsNullOrWhiteSpace(userName) ?  userName : user.Email },
-                { "companyName", companyName },
-                { "url", _settings.BasePortalAddress },
-                { "bpn", businessPartnerNumber }
+                { "companyName", user.CompanyName },
+                { "url", _settings.BasePortalAddress }
             };
 
-            await _mailingService.SendMails(user.Email, mailParameters, new [] { "EmailRegistrationWelcomeTemplate" }).ConfigureAwait(false);
+            await _mailingService.SendMails(user.Email, mailParameters, new List<string> { "EmailRegistrationWelcomeTemplate" }).ConfigureAwait(false);
         }
 
         if (failedUserNames.Any())
-            throw new ConflictException($"user(s) {string.Join(",", failedUserNames)} has no assigned email");
+            throw new ArgumentException($"user(s) {string.Join(",", failedUserNames)} has no assigned email");
     }
 
     private static async Task<List<UserRoleData>> GetRoleData(IUserRolesRepository userRolesRepository, IDictionary<string, IEnumerable<string>> roles)

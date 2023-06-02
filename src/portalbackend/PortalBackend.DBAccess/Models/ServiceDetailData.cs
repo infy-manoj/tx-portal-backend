@@ -40,7 +40,7 @@ public record ServiceDetailsData(
     /// <summary>
     /// Service Type Id of the offer
     /// </summary>
-    IEnumerable<ServiceTypeId> ServiceTypeIds,
+    IEnumerable<string> ServiceTypeIds,
 
     /// <summary>
     /// Provider of the offer.
@@ -80,15 +80,7 @@ public record ServiceDetailsData(
     /// <summary>
     /// License Type Id
     /// </summary>
-    LicenseTypeId LicenseTypeId,
-    
-    ///<summary>
-    /// Technical User Profile
-    ///</summary>
-    IEnumerable<TechnicalUserRoleData> TechnicalUserProfile
+    LicenseTypeId LicenseTypeId
 );
 
-public record TechnicalUserRoleData(
-    Guid TechnicalUserProfileId,
-    IEnumerable<string> UserRoles
-);
+

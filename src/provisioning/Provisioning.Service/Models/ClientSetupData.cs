@@ -1,4 +1,4 @@
-﻿/********************************************************************************
+/********************************************************************************
  * Copyright (c) 2021, 2023 BMW Group AG
  * Copyright (c) 2021, 2023 Contributors to the Eclipse Foundation
  *
@@ -18,11 +18,12 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-namespace Org.Eclipse.TractusX.Portal.Backend.Offers.Library.Models;
+using System.Text.Json.Serialization;
 
-public enum OfferCompanyRole
+namespace Org.Eclipse.TractusX.Portal.Backend.Provisioning.Service.Models;
+
+public class ClientSetupData
 {
-    Subscriber = 1,
-    
-    Provider = 2
+    [JsonPropertyName("redirectUrl")]
+    public string redirectUrl { get; set; } = null!;
 }

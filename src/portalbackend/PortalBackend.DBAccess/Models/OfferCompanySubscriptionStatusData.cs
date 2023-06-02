@@ -47,10 +47,4 @@ public class OfferCompanySubscriptionStatusData
     /// Subscription statuses of subscribing companies.
     /// </summary>
     public IEnumerable<CompanySubscriptionStatusData> CompanySubscriptionStatuses { get; set; }
-    
-    /// <summary>
-    /// Id of the lead Image
-    /// </summary>
-    /// <value></value>
-    public Guid Image { get; set; }
 }

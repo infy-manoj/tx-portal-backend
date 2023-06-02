@@ -36,8 +36,6 @@ public class UserProvisioningServiceCreateUsersTests
     private readonly int _numUsers;
     private readonly int _numRoles;
     private readonly int _indexSpecialUser;
-    private readonly string _firstNameSpecialUser;
-    private readonly Guid _companyUserIdSpecialUser;
     private readonly IProvisioningManager _provisioningManager;
     private readonly IPortalRepositories _portalRepositories;
     private readonly IUserRepository _userRepository;
@@ -59,8 +57,6 @@ public class UserProvisioningServiceCreateUsersTests
         _random = new Random();
         _numUsers = 10;
         _indexSpecialUser = 5;
-        _firstNameSpecialUser = _fixture.Create<string>();
-        _companyUserIdSpecialUser = Guid.NewGuid();
         _numRoles = 5;
 
         _companyNameIdpAliasData = _fixture.Build<CompanyNameIdpAliasData>().With(x => x.IsSharedIdp, false).Create();
@@ -147,17 +143,14 @@ public class UserProvisioningServiceCreateUsersTests
     {
         var sut = new UserProvisioningService(_provisioningManager,_portalRepositories);
 
-        var specialUser = _fixture.Build<UserCreationRoleDataIdpInfo>()
-            .With(x => x.FirstName, _firstNameSpecialUser)
-            .With(x => x.RoleDatas, PickValidRoles().DistinctBy(role => role.UserRoleText).ToList())
-            .Create();
+        var specialUser = _fixture.Build<UserCreationRoleDataIdpInfo>().With(x => x.RoleDatas, PickValidRoles().DistinctBy(role => role.UserRoleText).ToList()).Create();
 
         var userCreationInfoIdp = CreateUserCreationInfoIdp(() => specialUser).ToList();
 
-        var centralUserName = _companyUserIdSpecialUser.ToString();
+        var centralUserName = _companyNameIdpAliasData.IdpAlias + "." + specialUser.UserId;
         var iamUserId = _fixture.Create<string>();
 
-        A.CallTo(() => _provisioningManager.CreateCentralUserAsync(A<UserProfile>.That.Matches(p => p.UserName == centralUserName), A<IEnumerable<(string,IEnumerable<string>)>>._))
+        A.CallTo(() => _provisioningManager.CreateCentralUserAsync(A<UserProfile>.That.Matches(p => p.UserName ==  centralUserName), A<IEnumerable<(string,IEnumerable<string>)>>._))
             .Returns(iamUserId);
 
         A.CallTo(() => _provisioningManager.AssignClientRolesToCentralUserAsync(A<string>.That.IsEqualTo(iamUserId), A<IDictionary<string, IEnumerable<string>>>._))
@@ -183,14 +176,11 @@ public class UserProvisioningServiceCreateUsersTests
     {
         var sut = new UserProvisioningService(_provisioningManager,_portalRepositories);
 
-        var specialUser = _fixture.Build<UserCreationRoleDataIdpInfo>()
-            .With(x => x.FirstName, _firstNameSpecialUser)
-            .With(x => x.RoleDatas, Enumerable.Empty<UserRoleData>().ToList())
-            .Create();
+        var specialUser = _fixture.Build<UserCreationRoleDataIdpInfo>().With(x => x.RoleDatas, Enumerable.Empty<UserRoleData>().ToList()).Create();
 
         var userCreationInfoIdp = CreateUserCreationInfoIdp(() => specialUser).ToList();
 
-        var centralUserName = _companyUserIdSpecialUser.ToString();
+        var centralUserName = _companyNameIdpAliasData.IdpAlias + "." + specialUser.UserId;
         var iamUserId = _fixture.Create<string>();
 
         A.CallTo(() => _provisioningManager.CreateCentralUserAsync(A<UserProfile>.That.Matches(p => p.UserName ==  centralUserName), A<IEnumerable<(string,IEnumerable<string>)>>._))
@@ -406,12 +396,7 @@ public class UserProvisioningServiceCreateUsersTests
 
         A.CallTo(() => _userRepository.CreateCompanyUser(A<string>._, A<string>._, A<string>._,  A<Guid>._, A<CompanyUserStatusId>._, A<Guid>._))
             .ReturnsLazily((string firstName, string lastName, string email, Guid companyId, CompanyUserStatusId companyUserStatusId, Guid lastEditorId) =>
-                new CompanyUser(
-                    firstName == _firstNameSpecialUser ? _companyUserIdSpecialUser : Guid.NewGuid(),
-                    companyId,
-                    companyUserStatusId,
-                    DateTimeOffset.UtcNow,
-                    lastEditorId));
+                new CompanyUser(_fixture.Create<Guid>(), companyId, companyUserStatusId, DateTimeOffset.UtcNow, lastEditorId));
 
         A.CallTo(() => _businessPartnerRepository.CreateCompanyUserAssignedBusinessPartner(A<Guid>._, A<string>._))
             .ReturnsLazily((Guid companyUserId, string businessPartnerNumber) =>  new CompanyUserAssignedBusinessPartner(companyUserId, businessPartnerNumber));

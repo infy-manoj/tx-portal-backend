@@ -26,8 +26,8 @@ public interface ILanguageRepository
     /// Gets the languages with the matching short name
     /// </summary>
     /// <param name="languageShortName">the short name of the language</param>
-    /// <returns>true if existing otherwise false</returns>
-    Task<bool> IsValidLanguageCode(string languageShortName);
+    /// <returns>the shortname if existing otherwise false</returns>
+    Task<string?> GetLanguageAsync(string languageShortName);
 
     /// <summary>
     /// Checks whether the given language codes exists in the persistence storage
