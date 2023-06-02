@@ -43,7 +43,6 @@ namespace Org.Eclipse.TractusX.Portal.Backend.Offers.Library.Models;
 /// <param name="SalesManagerId">id of the salesmanager</param>
 /// <param name="PrivacyPolicies">the privacy policies</param>
 /// <param name="ServiceTypeIds">ids of the service types</param>
-/// <param name="TechnicalUserProfile">ids of the service types</param>
 public record OfferProviderResponse(
     string? Title,
     string Provider,
@@ -61,8 +60,7 @@ public record OfferProviderResponse(
     IDictionary<DocumentTypeId, IEnumerable<DocumentData>> Documents,
     Guid? SalesManagerId,
     IEnumerable<PrivacyPolicyId> PrivacyPolicies,
-    IEnumerable<ServiceTypeId>? ServiceTypeIds,
-    IDictionary<Guid, IEnumerable<string>> TechnicalUserProfile
+    IEnumerable<ServiceTypeId>? ServiceTypeIds
 );
 
 /// <summary>

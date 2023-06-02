@@ -60,6 +60,23 @@ public class UserProvisioningService : IUserProvisioningService
 
         var (companyId, companyName, businessPartnerNumber, creatorId, alias, isSharedIdp) = companyNameIdpAliasData;
 
+        IamUser CreateOptionalCompanyUserIamUserAssigningBusinessPartner(UserCreationRoleDataIdpInfo user, string centralUserId, Guid existingCompanyUserId)
+        {
+            if (existingCompanyUserId == Guid.Empty)
+            {
+                var newCompanyUserId = userRepository.CreateCompanyUser(user.FirstName, user.LastName, user.Email, companyId, CompanyUserStatusId.ACTIVE, creatorId).Id;
+                if (businessPartnerNumber != null)
+                {
+                    businessPartnerRepository.CreateCompanyUserAssignedBusinessPartner(newCompanyUserId, businessPartnerNumber);
+                }
+                return userRepository.CreateIamUser(newCompanyUserId, centralUserId);
+            }
+            else
+            {
+                return userRepository.CreateIamUser(existingCompanyUserId, centralUserId);                    
+            }
+        }
+
         var passwordProvider = new OptionalPasswordProvider(isSharedIdp);
 
         await foreach(var user in userCreationInfos)
@@ -71,16 +88,7 @@ public class UserProvisioningService : IUserProvisioningService
 
             try
             {
-                var companyUserId = await ValidateDuplicateIdpUsersAsync(userRepository, alias, user, companyId).ConfigureAwait(false);
-
-                if (companyUserId == Guid.Empty)
-                {
-                    companyUserId = userRepository.CreateCompanyUser(user.FirstName, user.LastName, user.Email, companyId, CompanyUserStatusId.ACTIVE, creatorId).Id;
-                    if (businessPartnerNumber != null)
-                    {
-                        businessPartnerRepository.CreateCompanyUserAssignedBusinessPartner(companyUserId, businessPartnerNumber);
-                    }
-                }
+                var existingCompanyUserId = await ValidateDuplicateIdpUsersAsync(userRepository, alias, user, companyId).ConfigureAwait(false);
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -88,7 +96,7 @@ public class UserProvisioningService : IUserProvisioningService
 
                 var centralUserId = await _provisioningManager.CreateCentralUserAsync(
                     new UserProfile(
-                        companyUserId.ToString(),
+                        alias + "." + providerUserId,
                         user.FirstName,
                         user.LastName,
                         user.Email
@@ -101,12 +109,16 @@ public class UserProvisioningService : IUserProvisioningService
 
                 await _provisioningManager.AddProviderUserLinkToCentralUserAsync(centralUserId, new IdentityProviderLink(alias, providerUserId, user.UserName)).ConfigureAwait(false);
 
-                iamUser = userRepository.CreateIamUser(companyUserId, centralUserId);
+                iamUser = CreateOptionalCompanyUserIamUserAssigningBusinessPartner(user, centralUserId, existingCompanyUserId);
 
                 await AssignRolesToNewUserAsync(userRolesRepository, user.RoleDatas, iamUser).ConfigureAwait(false);
             }
-            catch (Exception e) when (e is not OperationCanceledException)
+            catch (Exception e)
             {
+                if (e is OperationCanceledException)
+                {
+                    throw;
+                }
                 error = e;
             }
             if(iamUser == null && error == null)

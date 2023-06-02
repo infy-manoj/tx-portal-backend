@@ -27,48 +27,24 @@ public static class FakeIAsyncEnumerableExtensions
     public static IAsyncEnumerable<T> AsFakeIAsyncEnumerable<T>(this IEnumerable<T> enumerable, out IAsyncEnumerator<T> outAsyncEnumerator)
     {
         IEnumerator<T>? enumerator = null;
-        var fakeEnumerable = A.Fake<IAsyncEnumerable<T>>();
-        var fakeEnumerator = A.Fake<IAsyncEnumerator<T>>();
+        var asyncEnumerable = A.Fake<IAsyncEnumerable<T>>();
+        var asyncEnumerator = A.Fake<IAsyncEnumerator<T>>();
 
-        A.CallTo(() => fakeEnumerable.GetAsyncEnumerator(A<CancellationToken>._))
+        A.CallTo(() => asyncEnumerable.GetAsyncEnumerator(A<CancellationToken>._))
             .ReturnsLazily((CancellationToken _) =>
             {
                 if (enumerator != null) throw new InvalidOperationException();
                 enumerator = enumerable.GetEnumerator();
-                return fakeEnumerator;
+                return asyncEnumerator;
             });
 
-        A.CallTo(() => fakeEnumerator.MoveNextAsync())
+        A.CallTo(() => asyncEnumerator.MoveNextAsync())
             .ReturnsLazily(() => (enumerator ?? throw new InvalidOperationException()).MoveNext());
 
-        A.CallTo(() => fakeEnumerator.Current)
+        A.CallTo(() => asyncEnumerator.Current)
             .ReturnsLazily(() => (enumerator ?? throw new InvalidOperationException()).Current);
 
-        outAsyncEnumerator = fakeEnumerator;
-        return fakeEnumerable;
-    }
-
-    public static IEnumerable<T> AsFakeIEnumerable<T>(this IEnumerable<T> enumerable, out IEnumerator<T> outEnumerator)
-    {
-        IEnumerator<T>? enumerator = null;
-        var fakeEnumerable = A.Fake<IEnumerable<T>>();
-        var fakeEnumerator = A.Fake<IEnumerator<T>>();
-
-        A.CallTo(() => fakeEnumerable.GetEnumerator())
-            .ReturnsLazily(() =>
-            {
-                if (enumerator != null) throw new InvalidOperationException();
-                enumerator = enumerable.GetEnumerator();
-                return fakeEnumerator;
-            });
-
-        A.CallTo(() => fakeEnumerator.MoveNext())
-            .ReturnsLazily(() => (enumerator ?? throw new InvalidOperationException()).MoveNext());
-
-        A.CallTo(() => fakeEnumerator.Current)
-            .ReturnsLazily(() => (enumerator ?? throw new InvalidOperationException()).Current);
-
-        outEnumerator = fakeEnumerator;
-        return fakeEnumerable;
+        outAsyncEnumerator = asyncEnumerator;
+        return asyncEnumerable;
     }
 }

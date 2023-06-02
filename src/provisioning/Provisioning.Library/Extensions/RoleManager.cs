@@ -21,6 +21,7 @@
 using Org.Eclipse.TractusX.Portal.Backend.Framework.ErrorHandling;
 using Org.Eclipse.TractusX.Portal.Backend.Keycloak.ErrorHandling;
 using Org.Eclipse.TractusX.Portal.Backend.Keycloak.Library.Models.Roles;
+using Org.Eclipse.TractusX.Portal.Backend.Keycloak.Library.Models.Clients;
 
 namespace Org.Eclipse.TractusX.Portal.Backend.Provisioning.Library;
 
@@ -29,23 +30,27 @@ public partial class ProvisioningManager
     private async Task<(string? ClientId, IEnumerable<Role> RoleNames)> GetCentralClientIdRolesAsync(string clientName, IEnumerable<string> roleNames)
     {
         var count = roleNames.Count();
-        string? idOfClient = null;
+        Client? client = null;
         try
         {
-            idOfClient = await GetIdOfCentralClientAsync(clientName).ConfigureAwait(false);
+            client = await GetCentralClientViewableAsync(clientName).ConfigureAwait(false);
+            if (client == null)
+            {
+                return (null, Enumerable.Empty<Role>());
+            }
             switch (count)
             {
                 case 0:
-                    return (idOfClient, Enumerable.Empty<Role>());
+                    return (client.Id, Enumerable.Empty<Role>());
                 case 1:
-                    return (idOfClient, Enumerable.Repeat<Role>(await _CentralIdp.GetRoleByNameAsync(_Settings.CentralRealm, idOfClient, roleNames.Single()).ConfigureAwait(false), 1));
+                    return (client.Id, Enumerable.Repeat<Role>(await _CentralIdp.GetRoleByNameAsync(_Settings.CentralRealm, client.Id, roleNames.Single()).ConfigureAwait(false), 1));
                 default:
-                    return (idOfClient, (await _CentralIdp.GetRolesAsync(_Settings.CentralRealm, idOfClient).ConfigureAwait(false)).Where(x => roleNames.Contains(x.Name)));
+                    return (client.Id, (await _CentralIdp.GetRolesAsync(_Settings.CentralRealm, client.Id).ConfigureAwait(false)).Where(x => roleNames.Contains(x.Name)));
             }
         }
         catch(KeycloakEntityNotFoundException)
         {
-            return (idOfClient, Enumerable.Empty<Role>());
+            return (client?.Id, Enumerable.Empty<Role>());
         }
     }
 

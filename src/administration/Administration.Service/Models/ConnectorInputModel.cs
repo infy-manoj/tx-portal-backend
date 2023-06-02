@@ -30,14 +30,11 @@ namespace Org.Eclipse.TractusX.Portal.Backend.Administration.Service.Models;
 /// <param name="ConnectorUrl"> URL of the connector.</param>
 /// <param name="Location">Connector's location country code.</param>
 /// <param name="Certificate">The certificate for the daps call.</param>
-/// <param name="TechnicalUserId">Id of the technical user.</param>
 public record ConnectorInputModel(
     [MaxLength(255)] string Name,
     [MaxLength(255)] string ConnectorUrl,
     [StringLength(2, MinimumLength = 2)] string Location,
-    IFormFile? Certificate,
-    Guid? TechnicalUserId
-);
+    IFormFile? Certificate);
 
 /// <summary>
 /// Input model defining all parameters for creating a connector in persistence layer.
@@ -47,15 +44,12 @@ public record ConnectorInputModel(
 /// <param name="Location">Connector's location country code.</param>
 /// <param name="ProviderBpn">Providing company's BPN.</param>
 /// <param name="Certificate">The certificate for the daps call.</param>
-/// <param name="TechnicalUserId">Id of the technical user.</param>
 public record ManagedConnectorInputModel(
     [MaxLength(255)] string Name,
     [MaxLength(255)] string ConnectorUrl,
     [StringLength(2, MinimumLength = 2)] string Location,
     string ProviderBpn,
-    IFormFile? Certificate,
-    Guid? TechnicalUserId
-);
+    IFormFile? Certificate);
 
 public record ConnectorRequestModel(
     [MaxLength(255)] string Name,
@@ -63,6 +57,4 @@ public record ConnectorRequestModel(
     ConnectorTypeId ConnectorType,
     [StringLength(2, MinimumLength = 2)] string Location,
     Guid Provider,
-    Guid Host,
-    Guid? TechnicalUserId
-);
+    Guid Host);

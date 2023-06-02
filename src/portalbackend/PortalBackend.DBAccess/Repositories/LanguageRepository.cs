@@ -40,10 +40,12 @@ public class LanguageRepository : ILanguageRepository
     }
 
     /// <inheritdoc />
-    public Task<bool> IsValidLanguageCode(string languageShortName) =>
+    public Task<string?> GetLanguageAsync(string languageShortName) =>
         _portalDbContext.Languages
             .AsNoTracking()
-            .AnyAsync(language => language.ShortName == languageShortName);
+            .Where(language => language.ShortName == languageShortName)
+            .Select(language => language.ShortName)
+            .SingleOrDefaultAsync();
 
     /// <inheritdoc />
     public IAsyncEnumerable<string> GetLanguageCodesUntrackedAsync(IEnumerable<string> languageCodes) =>

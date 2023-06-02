@@ -18,20 +18,8 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-namespace Org.Eclipse.TractusX.Portal.Backend.Services.Service.ViewModels;
+using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.PortalEntities.Enums;
 
-/// <summary>
-/// Filters the OfferStatusId information
-/// </summary> 
-public enum ServiceReleaseStatusIdFilter
-{
-    /// <summary>
-    /// Filters the InReview OfferStatusId information
-    /// </summary>    
-    InReview = 1,
+namespace Org.Eclipse.TractusX.Portal.Backend.PortalBackend.DBAccess.Models;
 
-    /// <summary>
-    /// Filters the All OfferStatusId information
-    /// </summary>
-    All = 2
-}
+public record AppWithSubscriptionStatus(Guid AppId, OfferSubscriptionStatusId OfferSubscriptionStatus, string? Name, string Provider);

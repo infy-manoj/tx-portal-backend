@@ -22,21 +22,20 @@ using AutoFixture;
 using AutoFixture.AutoFakeItEasy;
 using FakeItEasy;
 using FluentAssertions;
-using Microsoft.Extensions.Options;
-using Org.Eclipse.TractusX.Portal.Backend.Framework.ErrorHandling;
-using Org.Eclipse.TractusX.Portal.Backend.Framework.Models;
-using Org.Eclipse.TractusX.Portal.Backend.Offers.Library.Models;
 using Org.Eclipse.TractusX.Portal.Backend.Offers.Library.Service;
 using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.DBAccess;
 using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.DBAccess.Models;
 using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.DBAccess.Repositories;
-using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.PortalEntities.Entities;
 using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.PortalEntities.Enums;
 using Org.Eclipse.TractusX.Portal.Backend.Services.Service.BusinessLogic;
+using Org.Eclipse.TractusX.Portal.Backend.Framework.ErrorHandling;
+using Org.Eclipse.TractusX.Portal.Backend.Offers.Library.Models;
 using Org.Eclipse.TractusX.Portal.Backend.Services.Service.ViewModels;
-using Org.Eclipse.TractusX.Portal.Backend.Tests.Shared;
-using System.Collections.Immutable;
+using Microsoft.Extensions.Options;
 using Xunit;
+using Org.Eclipse.TractusX.Portal.Backend.Framework.Models;
+using Org.Eclipse.TractusX.Portal.Backend.PortalBackend.PortalEntities.Entities;
+using Org.Eclipse.TractusX.Portal.Backend.Tests.Shared;
 
 namespace Org.Eclipse.TractusX.Portal.Backend.Services.Service.Tests.BusinessLogic;
 
@@ -116,11 +115,17 @@ public class ServiceReleaseBusinessLogicTest
         //Arrange
         var data = _fixture.Build<ServiceDetailsData>()
                            .With(x=>x.OfferStatusId, OfferStatusId.IN_REVIEW)
+                           .With(x=>x.Title, "ServiceTest")
+                           .With(x=>x.Provider, "TestProvider")
+                           .With(x=>x.ProviderUri, "TestProviderUri")
+                           .With(x=>x.ContactEmail, "test@gmail.com")
+                           .With(x=>x.ContactNumber, "6754321786")
+                           .With(x=>x.ServiceTypeIds, new []{ServiceTypeId.CONSULTANCE_SERVICE.ToString(),ServiceTypeId.DATASPACE_SERVICE.ToString()})
                            .Create();
         var serviceId = _fixture.Create<Guid>();
        
         A.CallTo(() => _offerRepository.GetServiceDetailsByIdAsync(serviceId))
-            .Returns(data);
+            .ReturnsLazily(() => data);
 
         //Act
         var result = await _sut.GetServiceDetailsByIdAsync(serviceId).ConfigureAwait(false);
@@ -129,60 +134,47 @@ public class ServiceReleaseBusinessLogicTest
         A.CallTo(() => _offerRepository.GetServiceDetailsByIdAsync(A<Guid>._))
             .MustHaveHappenedOnceExactly();
         result.Should().BeOfType<ServiceData>();
-        result.Title.Should().NotBeNull().And.Be(data.Title);
-        result.Provider.Should().Be(data.Provider);
-        result.ProviderUri.Should().NotBeNull().And.Be(data.ProviderUri);
-        result.ContactEmail.Should().NotBeNull().And.Be(data.ContactEmail);
-        result.ContactNumber.Should().NotBeNull().And.Be(data.ContactNumber);
-        result.OfferStatus.Should().Be(data.OfferStatusId);
-        result.TechnicalUserProfile.Should().HaveSameCount(data.TechnicalUserProfile).And.AllSatisfy(
-            x => data.TechnicalUserProfile.Should().ContainSingle(d => d.TechnicalUserProfileId == x.Key).Which.UserRoles.Should().ContainInOrder(x.Value)
-        );
+        result.Title.Should().Be("ServiceTest");
+        result.Provider.Should().Be("TestProvider");
+        result.ProviderUri.Should().Be("TestProviderUri");
+        result.ContactEmail.Should().Be("test@gmail.com");
+        result.ContactNumber.Should().Be("6754321786");
     }
 
     [Fact]
-    public async Task GetServiceDetailsByIdWillNullPropertiesAsync_ReturnsExpectedResult()
+    public async Task GetServiceDetailsByIdAsync_WithInvalidOfferStatus_ThrowsException()
     {
-        //Arrange
+        // Arrange
         var data = _fixture.Build<ServiceDetailsData>()
-                           .With(x => x.OfferStatusId, OfferStatusId.IN_REVIEW)
-                           .With(x => x.Title, (string?)null)
-                           .With(x => x.ProviderUri, (string?)null)
-                           .With(x => x.ContactEmail, (string?)null)
-                           .With(x => x.ContactNumber, (string?)null)
-                           .Create();
+                            .With(x=>x.OfferStatusId, OfferStatusId.CREATED)
+                            .Create();
         var serviceId = _fixture.Create<Guid>();
        
         A.CallTo(() => _offerRepository.GetServiceDetailsByIdAsync(serviceId))
-            .Returns(data);
+            .ReturnsLazily(() => data);
 
-        //Act
-        var result = await _sut.GetServiceDetailsByIdAsync(serviceId).ConfigureAwait(false);
-        
-        // Assert 
-        A.CallTo(() => _offerRepository.GetServiceDetailsByIdAsync(A<Guid>._))
-            .MustHaveHappenedOnceExactly();
-        result.Should().BeOfType<ServiceData>();
-        result.Title.Should().Be(Constants.ErrorString);
-        result.ProviderUri.Should().Be(Constants.ErrorString);
-        result.ContactEmail.Should().BeNull();
-        result.ContactNumber.Should().BeNull();
+        // Act
+        async Task Act() => await _sut.GetServiceDetailsByIdAsync(serviceId).ConfigureAwait(false);
+
+        // Assert
+        var error = await Assert.ThrowsAsync<ConflictException>(Act).ConfigureAwait(false);
+        error.Message.Should().Be($"serviceId {serviceId} is incorrect status");
     }
-
+    
     [Fact]
     public async Task GetServiceDetailsByIdAsync_WithInvalidServiceId_ThrowsException()
     {
         // Arrange
         var invalidServiceId = Guid.NewGuid();
         A.CallTo(() => _offerRepository.GetServiceDetailsByIdAsync(invalidServiceId))
-           .Returns((ServiceDetailsData?)null);
+           .ReturnsLazily(() => (ServiceDetailsData?)null);
 
         // Act
         async Task Act() => await _sut.GetServiceDetailsByIdAsync(invalidServiceId).ConfigureAwait(false);
 
         // Assert
         var error = await Assert.ThrowsAsync<NotFoundException>(Act).ConfigureAwait(false);
-        error.Message.Should().Be($"serviceId {invalidServiceId} not found or Incorrect Status");
+        error.Message.Should().Be($"serviceId {invalidServiceId} does not exist");
     }
 
     [Fact]
@@ -245,7 +237,7 @@ public class ServiceReleaseBusinessLogicTest
             .Create();
 
         A.CallTo(() => _offerService.GetProviderOfferDetailsForStatusAsync(serviceId, iamUserId, OfferTypeId.SERVICE))
-            .Returns(data);
+            .ReturnsLazily(() => data);
 
         var result = await _sut.GetServiceDetailsForStatusAsync(serviceId, iamUserId).ConfigureAwait(false);
 
@@ -253,54 +245,61 @@ public class ServiceReleaseBusinessLogicTest
         result.Title.Should().Be("test title");
         result.ContactEmail.Should().Be("info@test.de");
         result.ServiceTypeIds.Should().HaveCount(2);
-        result.TechnicalUserProfile.Should().HaveSameCount(data.TechnicalUserProfile).And.AllSatisfy(
-            x => data.TechnicalUserProfile.Should().ContainSingle(d => d.Key == x.Key).Which.Value.Should().ContainInOrder(x.Value)
-        );
     }
 
     #region GetAllInReviewStatusApps
 
-    [Theory]
-    [InlineData(ServiceReleaseStatusIdFilter.All, true)]
-    [InlineData(ServiceReleaseStatusIdFilter.InReview, false)]
-    [InlineData(null, true)]
-    public async Task GetAllInReviewStatusServiceAsync_ReturnsExpected(ServiceReleaseStatusIdFilter? filter, bool isOptions)
+    [Fact]
+    public async Task GetAllInReviewStatusServiceAsync_InActiveRequest()
     {
         // Arrange
-        var inReviewData = _fixture.CreateMany<InReviewServiceData>(15).ToImmutableArray();
-        var paginationResult = (int skip, int take) => Task.FromResult(new Pagination.Source<InReviewServiceData>(15, inReviewData.Skip(skip).Take(take)));
-        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(A<IEnumerable<OfferStatusId>>._, A<OfferTypeId>._, A<OfferSorting>._, A<string>._, A<string>._, A<string>._))
+        var InReviewData = new[] {
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.ACTIVE,null!,"test data1"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.ACTIVE,null!,"test data2"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.ACTIVE,null!,"test data3"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.ACTIVE,null!,"test data4"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.ACTIVE,null!,"test data5")
+        };
+        var paginationResult = (int skip, int take) => Task.FromResult(new Pagination.Source<InReviewServiceData>(5, InReviewData.Skip(skip).Take(take)));
+        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(A<IEnumerable<OfferStatusId>>._, A<OfferTypeId>._, A<OfferSorting>._, A<string>._, A<string>._))
             .Returns(paginationResult);
 
         // Act
-        var result = await _sut.GetAllInReviewStatusServiceAsync(1, 5, OfferSorting.DateAsc, null, "en", filter).ConfigureAwait(false);
+        var result = await _sut.GetAllInReviewStatusServiceAsync(0, 5, OfferSorting.DateAsc, null, "en").ConfigureAwait(false);
 
         // Assert
-        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(
-            A<IEnumerable<OfferStatusId>>.That.Matches(x =>
-                x.SequenceEqual(isOptions
-                    ? _options.Value.OfferStatusIds
-                    : new [] { OfferStatusId.IN_REVIEW })),
-            OfferTypeId.SERVICE, A<OfferSorting>._, A<string>._, A<string>._, A<string>._)).MustHaveHappenedOnceExactly();
-
-        result.Should().BeOfType<Pagination.Response<InReviewServiceData>>()
-            .Which.Meta.Should().Match<Pagination.Metadata>(x =>
-                x.NumberOfElements == 15 &&
-                x.NumberOfPages == 3 &&
-                x.Page == 1 &&
-                x.PageSize == 5);
-        result.Content.Should().HaveCount(5).And.Satisfy(
-            x => x == inReviewData[5],
-            x => x == inReviewData[6],
-            x => x == inReviewData[7],
-            x => x == inReviewData[8],
-            x => x == inReviewData[9]
-        );
+        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(A<IEnumerable<OfferStatusId>>
+            .That.Matches(x => x.Count() == 2 && x.All(y => _options.Value.OfferStatusIds.Contains(y))), OfferTypeId.SERVICE, A<OfferSorting>._, A<string>._, A<string>._)).MustHaveHappenedOnceExactly();
+        Assert.IsType<Pagination.Response<InReviewServiceData>>(result);
+        result.Content.Should().HaveCount(5);
+        result.Content.Should().Contain(x => x.Status == OfferStatusId.ACTIVE);
     }
 
-    #endregion
+    [Fact]
+    public async Task GetAllInReviewStatusServiceAsync_InReviewRequest()
+    {
+        // Arrange
+        var InReviewData = new[]{
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.IN_REVIEW,null!,"test data1"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.IN_REVIEW,null!,"test data2"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.IN_REVIEW,null!,"test data3"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.IN_REVIEW,null!,"test data4"),
+            new InReviewServiceData(Guid.NewGuid(),null!, OfferStatusId.IN_REVIEW,null!,"test data5")
+        };
+        var paginationResult = (int skip, int take) => Task.FromResult(new Pagination.Source<InReviewServiceData>(5, InReviewData.Skip(skip).Take(take)));
+        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(A<IEnumerable<OfferStatusId>>._, A<OfferTypeId>._, A<OfferSorting>._, A<string>._, A<string>._))
+            .Returns(paginationResult);
 
-    #region SubmitOfferConsentAsync
+        // Act
+        var result = await _sut.GetAllInReviewStatusServiceAsync(0, 5, OfferSorting.DateAsc, null, "en").ConfigureAwait(false);
+
+        // Assert
+        A.CallTo(() => _offerRepository.GetAllInReviewStatusServiceAsync(A<IEnumerable<OfferStatusId>>
+            .That.Matches(x => x.Count() == 2 && x.All(y => _options.Value.OfferStatusIds.Contains(y))), OfferTypeId.SERVICE, A<OfferSorting>._, A<string>._, A<string>._)).MustHaveHappenedOnceExactly();
+        Assert.IsType<Pagination.Response<InReviewServiceData>>(result);
+        result.Content.Should().HaveCount(5);
+        result.Content.Should().Contain(x => x.Status == OfferStatusId.IN_REVIEW);
+    }
 
     [Fact]
     public async Task SubmitOfferConsentAsync_WithValidData_ReturnsExpected()
@@ -563,47 +562,6 @@ public class ServiceReleaseBusinessLogicTest
         A.CallTo(() => _offerService.ApproveOfferRequestAsync(appId, _iamUserId, OfferTypeId.SERVICE,
             A<IEnumerable<NotificationTypeId>>._, A<IDictionary<string, IEnumerable<string>>>._,
             A<IEnumerable<NotificationTypeId>>._, A<IDictionary<string, IEnumerable<string>>>._)).MustHaveHappenedOnceExactly();
-    }
-
-    #endregion
-
-    #region GetTechnicalUserProfilesForOffer
-
-    [Fact]
-    public async Task GetTechnicalUserProfilesForOffer_ReturnsExpected()
-    {
-        // Arrange
-        A.CallTo(() => _offerService.GetTechnicalUserProfilesForOffer(_existingServiceId, _iamUserId, OfferTypeId.SERVICE))
-            .Returns(_fixture.CreateMany<TechnicalUserProfileInformation>(5));
-        var sut = new ServiceReleaseBusinessLogic(null!, _offerService, Options.Create(new ServiceSettings()));
-
-        // Act
-        var result = await sut.GetTechnicalUserProfilesForOffer(_existingServiceId, _iamUserId)
-            .ConfigureAwait(false);
-
-        result.Should().HaveCount(5);
-    }
-
-    #endregion
-
-    #region UpdateTechnicalUserProfiles
-
-    [Fact]
-    public async Task UpdateTechnicalUserProfiles_ReturnsExpected()
-    {
-        // Arrange
-        const string clientProfile = "cl";
-        var data = _fixture.CreateMany<TechnicalUserProfileData>(5);
-        var sut = new ServiceReleaseBusinessLogic(null!, _offerService, Options.Create(new ServiceSettings{TechnicalUserProfileClient = clientProfile}));
-
-        // Act
-        await sut
-            .UpdateTechnicalUserProfiles(_existingServiceId, data, _iamUserId)
-            .ConfigureAwait(false);
-
-        A.CallTo(() => _offerService.UpdateTechnicalUserProfiles(_existingServiceId, OfferTypeId.SERVICE,
-                A<IEnumerable<TechnicalUserProfileData>>.That.Matches(x => x.Count() == 5), _iamUserId, clientProfile))
-            .MustHaveHappenedOnceExactly();
     }
 
     #endregion

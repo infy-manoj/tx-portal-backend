@@ -70,7 +70,7 @@ public class ServiceBusinessLogic : IServiceBusinessLogic
             page,
             size,
             _settings.ApplicationsMaxPageSize,
-            _portalRepositories.GetInstance<IOfferRepository>().GetActiveServicesPaginationSource(sorting, serviceTypeId, Constants.DefaultLanguage));
+            _portalRepositories.GetInstance<IOfferRepository>().GetActiveServicesPaginationSource(sorting, serviceTypeId));
 
     /// <inheritdoc />
     public Task<Guid> AddServiceSubscription(Guid serviceId, IEnumerable<OfferAgreementConsentData> offerAgreementConsentData, string iamUserId, string accessToken) =>
@@ -125,26 +125,9 @@ public class ServiceBusinessLogic : IServiceBusinessLogic
         _offerSetupService.AutoSetupOfferAsync(data, _settings.ITAdminRoles, iamUserId, OfferTypeId.SERVICE, _settings.UserManagementAddress, _settings.ServiceManagerRoles);
 
     /// <inheritdoc/>
-    public async Task<Pagination.Response<OfferCompanySubscriptionStatusResponse>> GetCompanyProvidedServiceSubscriptionStatusesForUserAsync(int page, int size, string iamUserId, SubscriptionStatusSorting? sorting, OfferSubscriptionStatusId? statusId, Guid? offerId)
-    {
-        async Task<Pagination.Source<OfferCompanySubscriptionStatusResponse>?> GetCompanyProvidedAppSubscriptionStatusData(int skip, int take)
-        {
-            var offerCompanySubscriptionResponse = await _portalRepositories.GetInstance<IOfferSubscriptionsRepository>()
-                .GetOwnCompanyProvidedOfferSubscriptionStatusesUntrackedAsync(iamUserId, OfferTypeId.SERVICE, sorting, statusId ?? OfferSubscriptionStatusId.ACTIVE, offerId)(skip,take).ConfigureAwait(false);
-
-            return offerCompanySubscriptionResponse == null
-                ? null
-                : new Pagination.Source<OfferCompanySubscriptionStatusResponse>(
-                    offerCompanySubscriptionResponse.Count,
-                    offerCompanySubscriptionResponse.Data.Select(item =>
-                        new OfferCompanySubscriptionStatusResponse(
-                            item.OfferId,
-                            item.ServiceName,
-                            item.CompanySubscriptionStatuses,
-                            item.Image == Guid.Empty ? null : item.Image)));
-        }
-        return await Pagination.CreateResponseAsync(page, size, _settings.ApplicationsMaxPageSize, GetCompanyProvidedAppSubscriptionStatusData).ConfigureAwait(false);
-    }
+    public Task<Pagination.Response<OfferCompanySubscriptionStatusData>> GetCompanyProvidedServiceSubscriptionStatusesForUserAsync(int page, int size, string iamUserId, SubscriptionStatusSorting? sorting, OfferSubscriptionStatusId? statusId) =>
+        Pagination.CreateResponseAsync(page, size, _settings.ApplicationsMaxPageSize, _portalRepositories.GetInstance<IOfferSubscriptionsRepository>()
+            .GetOwnCompanyProvidedOfferSubscriptionStatusesUntrackedAsync(iamUserId, OfferTypeId.SERVICE, sorting, statusId ?? OfferSubscriptionStatusId.ACTIVE));
 
     /// <inheritdoc/>
     public Task SubmitServiceAsync(Guid serviceId, string iamUserId) => 
@@ -203,10 +186,10 @@ public class ServiceBusinessLogic : IServiceBusinessLogic
     }
 
     /// <inheritdoc />
-    public Task<ProviderSubscriptionDetailData> GetSubscriptionDetailForProvider(Guid serviceId, Guid subscriptionId, string iamUserId) =>
-        _offerService.GetSubscriptionDetailsForProviderAsync(serviceId, subscriptionId, iamUserId, OfferTypeId.SERVICE, _settings.CompanyAdminRoles);
-
+    public Task<IEnumerable<TechnicalUserProfileInformation>> GetTechnicalUserProfilesForOffer(Guid offerId, string iamUserId) =>
+        _offerService.GetTechnicalUserProfilesForOffer(offerId, iamUserId, OfferTypeId.SERVICE);
+    
     /// <inheritdoc />
-    public Task<SubscriberSubscriptionDetailData> GetSubscriptionDetailForSubscriber(Guid serviceId, Guid subscriptionId, string iamUserId) =>
-        _offerService.GetSubscriptionDetailsForSubscriberAsync(serviceId, subscriptionId, iamUserId, OfferTypeId.SERVICE, _settings.SalesManagerRoles);
+    public Task UpdateTechnicalUserProfiles(Guid serviceId, IEnumerable<TechnicalUserProfileData> data, string iamUserId) =>
+        _offerService.UpdateTechnicalUserProfiles(serviceId, OfferTypeId.SERVICE, data, iamUserId, _settings.TechnicalUserProfileClient);
 }

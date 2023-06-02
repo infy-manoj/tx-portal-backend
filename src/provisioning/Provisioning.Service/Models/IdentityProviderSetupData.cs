@@ -18,22 +18,21 @@
  * SPDX-License-Identifier: Apache-2.0
  ********************************************************************************/
 
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Org.Eclipse.TractusX.Portal.Backend.Provisioning.ProvisioningEntities;
+using System.Text.Json.Serialization;
 
-namespace Org.Eclipse.TractusX.Portal.Backend.Provisioning.DBAccess;
-
-public static class ProvisioningDBAccessStartupServiceExtensions
+namespace Org.Eclipse.TractusX.Portal.Backend.Provisioning.Service.Models
 {
-    public static IServiceCollection AddProvisioningDBAccess(this IServiceCollection services, IConfiguration configuration)
+    public class IdentityProviderSetupData
     {
-        services.AddTransient<IProvisioningDBAccess, ProvisioningDBAccess>()
-            .AddDbContext<ProvisioningDbContext>(options =>
-                options.UseNpgsql(configuration.GetConnectionString("ProvisioningDB")))
-            .AddHealthChecks()
-            .AddDbContextCheck<ProvisioningDbContext>("ProvisioningDbContext", tags: new [] { "provisioningdb" });
-        return services;
+        [JsonPropertyName("clientId")]
+        public string? ClientId { get; set; }
+        [JsonPropertyName("metadataUrl")]
+        public string? MetadataUrl { get; set; }
+        [JsonPropertyName("clientAuthMethod")]
+        public string? ClientAuthMethod { get; set; }
+        [JsonPropertyName("clientSecret")]
+        public string? ClientSecret { get; set; }
+        [JsonPropertyName("organisationName")]
+        public string? OrganisationName { get; set; }
     }
 }
